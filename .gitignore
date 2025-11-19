@@ -1,0 +1,16 @@
+# 忽略所有编译产物、镜像等
+IMAGE/
+output/
+buildroot/output/
+out/
+
+# 忽略特大工具/二进制
+tools/linux/SocToolKit/SocToolKit
+
+# 通用的打包/镜像文件（按需再加）
+*.tar
+*.tar.gz
+*.tar.bz2
+*.img
+*.bin
+*.iso

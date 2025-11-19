@@ -1,0 +1,82 @@
+[32;1m[build.sh:info] switch to DTS: /home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/kernel/arch/arm/boot/dts/rv1106g-panghu-v1.dts[0m
+[32;1m[build.sh:info] switch to kernel defconfig: /home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/kernel/arch/arm/configs/panghu_v1_rv1106_kernel_defconfig[0m
+[32;1m[build.sh:info] switch to buildroot defconfig: /home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/buildroot/buildroot-2023.02.6/configs/panghu_v1_buildroot_defconfig[0m
+**************************************
+Check [OK]: dtc --version
+**************************************
+Check [OK]: makeinfo --version
+**************************************
+Check [OK]: gperf --version
+**************************************
+Check [OK]: dpkg --list |grep g++-.*-multilib
+**************************************
+Check [OK]: dpkg --list |grep gcc-.*-multilib
+**************************************
+Check [OK]: make -v
+GLOBAL_PARTITIONS: 0x40000@0x0(env),0x40000@0x40000(idblock),0x80000@0x80000(uboot),0x400000@0x100000(boot),0x4000000@0x500000(oem),0x2000000@0x4500000(userdata),0x19000000@0x6500000(rootfs)
+[32;1m[build.sh:info] Partition Filesystem Type Configure: rootfs@IGNORE@ubifs,oem@/oem@ubifs,userdata@/userdata@ubifs[0m
+============Start building kernel============
+TARGET_ARCH          =arm
+TARGET_KERNEL_CONFIG =panghu_v1_rv1106_kernel_defconfig
+TARGET_KERNEL_DTS    =rv1106g-panghu-v1.dts
+TARGET_KERNEL_CONFIG_FRAGMENT =
+==========================================
+make: Entering directory '/home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv'
+[32;1m ==sysdrv== build kernel  [0m
+make -C /home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/kernel ARCH=arm mrproper
+make[1]: Entering directory '/home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/kernel'
+make[1]: Leaving directory '/home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/kernel'
+make O=/home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/objs_kernel -C /home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/kernel ARCH=arm \
+	CROSS_COMPILE=arm-rockchip830-linux-uclibcgnueabihf- panghu_v1_rv1106_kernel_defconfig  || exit 1
+make[1]: Entering directory '/home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/kernel'
+make[2]: 进入目录“/home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/objs_kernel”
+  GEN     Makefile
+#
+# No change to .config
+#
+make[2]: 离开目录“/home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/objs_kernel”
+make[1]: Leaving directory '/home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/kernel'
+make O=/home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/objs_kernel -C /home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/kernel ARCH=arm \
+	CROSS_COMPILE=arm-rockchip830-linux-uclibcgnueabihf- rv1106g-panghu-v1.img BOOT_ITS=/home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/kernel/boot.its -j4 || exit 1
+make[1]: Entering directory '/home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/kernel'
+make[2]: 进入目录“/home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/objs_kernel”
+  GEN     Makefile
+  DTC     arch/arm/boot/dts/rv1106g-panghu-v1.dtb
+  CALL    /home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/kernel/scripts/atomic/check-atomics.sh
+  CALL    /home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/kernel/scripts/checksyscalls.sh
+  CHK     include/generated/compile.h
+  UPD     include/generated/compile.h
+make[4]: *** 没有规则可制作目标“debian/canonical-certs.pem”，由“certs/x509_certificate_list” 需求。 停止。
+make[4]: *** 正在等待未完成的任务....
+make[3]: *** [/home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/kernel/Makefile:1935：certs] 错误 2
+make[3]: *** 正在等待未完成的任务....
+  CC      init/version.o
+In file included from /home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/kernel/include/linux/build-salt.h:4,
+                 from /home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/kernel/init/version.c:11:
+/home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/kernel/include/linux/elfnote.h:74:10: fatal error: opening dependency file init/.version.o.d: Permission denied
+   struct elf##size##_note _nhdr;    \
+          ^~~
+/home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/kernel/include/linux/elfnote.h:93:2: note: in expansion of macro '_ELFNOTE'
+  _ELFNOTE(size, name, __LINE__, type, desc)
+  ^~~~~~~~
+/home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/kernel/include/linux/elfnote.h:95:37: note: in expansion of macro 'ELFNOTE'
+ #define ELFNOTE32(name, type, desc) ELFNOTE(32, name, type, desc)
+                                     ^~~~~~~
+/home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/kernel/include/linux/build-salt.h:16:8: note: in expansion of macro 'ELFNOTE32'
+        ELFNOTE32("Linux", LINUX_ELFNOTE_BUILD_SALT, CONFIG_BUILD_SALT)
+        ^~~~~~~~~
+/home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/kernel/init/version.c:55:1: note: in expansion of macro 'BUILD_SALT'
+ BUILD_SALT;
+ ^~~~~~~~~~
+compilation terminated.
+make[4]: *** [/home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/kernel/scripts/Makefile.build:273：init/version.o] 错误 1
+make[3]: *** [/home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/kernel/Makefile:1935：init] 错误 2
+make[2]: *** [arch/arm/Makefile:375：rv1106g-panghu-v1.img] 错误 2
+make[2]: 离开目录“/home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/objs_kernel”
+make[1]: *** [Makefile:185: __sub-make] Error 2
+make[1]: Leaving directory '/home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv/source/kernel'
+make: *** [Makefile:486: kernel] Error 1
+make: Leaving directory '/home/jj/rockchip/Smart_Glasses_SDK/rv1106-sdk/sysdrv'
+[31;1m[build.sh:error] Running build_kernel failed![0m
+[31;1m[build.sh:error] exit code 2 from line 853:[0m
+[32;1m[build.sh:info]     make kernel -C ${SDK_SYSDRV_DIR} $kernel_build_options KERNEL_DTS=${RK_KERNEL_DTS} KERNEL_CFG=${RK_KERNEL_DEFCONFIG} KERNEL_CFG_FRAGMENT=${RK_KERNEL_DEFCONFIG_FRAGMENT}[0m
