@@ -1,16 +1,76 @@
-# 忽略所有编译产物、镜像等
-IMAGE/
-output/
+# ---- Rockchip RV1106 SDK Ignore Rules ----
+
+# Buildroot large dirs
 buildroot/output/
-out/
+buildroot/dl/
+buildroot/build/
 
-# 忽略特大工具/二进制
-tools/linux/SocToolKit/SocToolKit
+# Sysdrv build outputs
+sysdrv/build/
+sysdrv/output/
+sysdrv/dl/
+sysdrv/logs/
 
-# 通用的打包/镜像文件（按需再加）
-*.tar
-*.tar.gz
-*.tar.bz2
+# Kernel build outputs
+output/
+IMAGE/
 *.img
 *.bin
-*.iso
+*.elf
+*.map
+*.o
+*.a
+*.so
+*.ko
+
+# UBI / NAND / rootfs images
+*.ubifs
+*.ubi
+*.simg
+*.img
+
+# Logs
+*.log
+*.log.*
+*.tmp
+
+# Temporary files
+*.swp
+*.swo
+*.bak
+*~
+*.cache
+*.lock
+*.pid
+
+# Python cache
+__pycache__/
+*.pyc
+
+# VSCode / CLion / JetBrains
+.vscode/
+.idea/
+
+# Tarballs
+*.tar.gz
+*.tgz
+*.zip
+*.7z
+
+# Do not upload SDK tarballs
+rv1106_full_sdk.tar.gz
+
+# OEM / Board outputs
+oem/
+userdata/
+rootfs/
+rootfs_overlay/
+
+# Build scripts temp
+*.mk.tmp
+*.mk.bak
+
+# Host tools build dir
+host/
+build/
+

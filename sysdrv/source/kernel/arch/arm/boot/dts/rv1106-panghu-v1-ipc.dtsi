@@ -532,4 +532,11 @@
     };
 };
 
-
+&gpio0 {
+	pmic_pwr_ctrl_gpio: pmic-pwr-ctrl-gpio {
+		gpio-hog;
+        gpios = <RK_PA3 GPIO_ACTIVE_LOW>;
+        output-low;
+        line-name = "pmic-pwr-ctrl";
+	};
+};
