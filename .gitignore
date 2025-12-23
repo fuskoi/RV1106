@@ -1,0 +1,49 @@
+################################
+# Rockchip / RV1106 build output
+################################
+IMAGE/
+output/
+rockdev/
+*.img
+*.map
+*.rk
+
+################################
+# sysdrv build output
+################################
+sysdrv/out/
+sysdrv/drv_ko/**/*.ko
+sysdrv/drv_ko/**/*.mod
+sysdrv/drv_ko/**/*.cmd
+sysdrv/drv_ko/**/*.o
+sysdrv/drv_ko/**/*.symvers
+
+################################
+# Buildroot
+################################
+source/buildroot/output/
+source/buildroot/dl/
+
+################################
+# Kernel build temp files
+################################
+source/kernel/**/*.o
+source/kernel/**/*.a
+source/kernel/**/*.cmd
+source/kernel/**/*.tmp
+source/kernel/**/.tmp_versions/
+source/kernel/**/modules.order
+source/kernel/**/Module.symvers
+
+################################
+# Logs
+################################
+*.log
+
+################################
+# Editor / OS
+################################
+.vscode/
+.idea/
+*.swp
+.DS_Store

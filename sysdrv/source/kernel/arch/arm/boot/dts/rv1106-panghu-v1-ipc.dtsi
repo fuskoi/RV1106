@@ -1,0 +1,476 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2022 Rockchip Electronics Co., Ltd.
+ */
+#include "rv1106-amp.dtsi"
+
+/ {
+	chosen {
+		bootargs = "earlycon=uart8250,mmio32,0xff4c0000 console=ttyFIQ0 root=/dev/mmcblk1p7 rootwait snd_soc_core.prealloc_buffer_size_kbytes=16 coherent_pool=0 snd_soc_core.disable_offload=0 log_buf_len=1M mmc.debug=1";
+	};
+
+	reserved_memory: reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+		
+		drm_logo: drm-logo@00000000 {
+			compatible = "rockchip,drm-logo";
+			reg = <0x0 0x0>;
+		};
+		
+		rkisp_reserved: rkisp@0 {
+			compatible = "shared-dma-pool";
+			inactive;
+			reusable;
+			size = <0x800000>; //8M for ISP
+		};
+		
+		linux,cma {
+			status = "okay";
+			compatible = "shared-dma-pool";
+			inactive;
+			reusable;
+			size = <0xA00000>; //10M
+			linux,cma-default;
+		};
+	};
+
+	/* ES8389音频编解码器声卡 - 配置为两个单端麦克风和双声道立体声喇叭 */
+	es8389_sound: es8389-sound {
+		status = "okay";
+		compatible = "simple-audio-card";
+		simple-audio-card,name = "rv1106-es8389";
+		simple-audio-card,format = "i2s";
+		simple-audio-card,mclk-fs = <256>;
+		simple-audio-card,bitclock-master = <&i2s0_8ch>;
+		simple-audio-card,frame-master = <&i2s0_8ch>;
+		//spk-con-gpio = <&gpio2 RK_PA3 GPIO_ACTIVE_HIGH>;
+		rockchip,audio-routing =
+			/* 双声道立体声喇叭输出 - 左声道和右声道分别连接到LOUT2和ROUT2 */
+			"Speaker", "LOUT2",
+			"Speaker", "ROUT2",
+			"Speaker", "Speaker Power",
+			"Speaker", "Speaker Power",
+			/* 两个单端麦克风输入 - 左麦克风连接到LINPUT1，右麦克风连接到RINPUT1 */
+			"LINPUT1", "Left Mic",
+			"RINPUT1", "Right Mic";
+		dai_cpu: simple-audio-card,cpu {sound-dai = <&i2s0_8ch>;};
+		simple-audio-card,codec {sound-dai = <&es8389>;};
+	};
+
+	vcc_1v8: vcc-1v8 {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_1v8";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+	};
+
+	vcc_3v3: vcc-3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_3v3";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+	};
+
+	vdd_arm: vdd-arm {
+		compatible = "regulator-fixed";
+		regulator-name = "vdd_arm";
+		regulator-min-microvolt = <800000>;
+		regulator-max-microvolt = <1000000>;
+		regulator-init-microvolt = <900000>;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+
+	// 这个ddr的电压是axp2101给的电压，需配置2101之后才可以设置ddr的电压(待实现)
+	vdd_ddr: vdd-ddr {
+		compatible = "regulator-fixed";
+		regulator-name = "vdd_ddr";
+		regulator-min-microvolt = <1350000>;
+		regulator-max-microvolt = <1350000>;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+
+	vdd_ddr_io: vdd-ddr-io {
+		compatible = "regulator-fixed";
+		regulator-name = "vdd_ddr_io";
+		regulator-min-microvolt = <1350000>;
+		regulator-max-microvolt = <1350000>;
+		regulator-always-on;
+		regulator-boot-on;
+	};
+
+	/* AXP2101按键配置 - IRQ连接到GPIO1PD0 */
+	/* 注意：AXP2101的IRQ引脚通常是低电平有效（开漏输出） */
+	axp2101_key: axp2101-key {
+		compatible = "x-powers,axp2101-key";
+		irq-gpios = <&gpio1 RK_PD0 GPIO_ACTIVE_LOW>;
+		
+		/* 按键码配置 */
+		keycode-single = <116>;  /* KEY_POWER - 单击 */
+		keycode-double = <102>;  /* KEY_HOME - 双击 */
+		keycode-short = <114>;   /* KEY_VOLUMEDOWN - 短按 */
+		keycode-long = <115>;    /* KEY_VOLUMEUP - 长按 */
+		
+		/* 时间阈值配置（毫秒） */
+		double-click-interval = <300>;  /* 双击间隔时间 */
+		short-press-time = <50>;        /* 短按时间 */
+		long-press-time = <1000>;       /* 长按时间 */
+		debounce-time = <20>;            /* 消抖时间 */
+		
+		status = "okay";
+	};
+
+	/* WS2812 LED驱动 - 使用PWM2M0接口，PWM+DMA方式 */
+	ws2812 {
+		compatible = "worldsemi,ws2812-pwm";
+		pwms = <&pwm2 0 1250 0>;  /* PWM2, 周期1250ns (800kHz) */
+		status = "okay";
+	};
+};
+
+/**********SDMMC**********/
+&sdmmc {
+	status = "okay";
+	max-frequency = <50000000>;
+	no-sdio;
+	no-mmc;
+	bus-width = <4>;
+	cap-mmc-highspeed;
+	cap-sd-highspeed;
+	disable-wp;
+	pinctrl-names = "default";
+	pinctrl-0 = <&sdmmc0_clk &sdmmc0_cmd &sdmmc0_det &sdmmc0_bus4>;
+};
+
+/***********mmc interface for wifi map to sdio set for sdio mode**********/
+&sdio {
+	status = "okay";
+	max-frequency = <50000000>; // 最大运行频率不超过 150Mhz; SDIO2.0 卡最大 50M，SDIO3.0 最大支持 150M
+	bus-width = <4>;             // 4线数据模式
+
+	cap-sd-highspeed;            // 此配置同 SD 卡功能，作为 SDIO 外设，也有区分是否为 highspeed 的 SDIO 外设。
+	cap-sdio-irq;                // 此配置标识该 SDIO 外设(通常是 Wifi)是否支持 sdio 中断
+	keep-power-in-suspend;       // 此配置表示是否支持睡眠不断电，请默认加入该选项。Wifi 一般都有深度唤醒的要求。
+	non-removable;               // 此项表示该插槽为不可移动设备且此项为 SDIO 设备必须添加项。        
+	no-1-8-v;
+	supports-sdio;               // 标识此插槽为 SDIO 功能，为必须添加项。否则无法初始化 SDIO 外设。
+	
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&sdmmc1m1_clk &sdmmc1m1_cmd &sdmmc1m1_bus4>; // rv1106-pinctrl.dtsi
+	pinctrl-1 = <&sdmmc1m1_idle_pins>;
+};
+
+/***************************** AUDIO ********************************/
+&i2s0_8ch {
+	status = "okay";
+	rockchip,clk-trcm = <1>;
+	rockchip,io-func = <1>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2s0_sclk &i2s0_lrck &i2s0_sdi0 &i2s0_sdo0 &i2s0_mclk>;
+	assigned-clocks = <&cru MCLK_I2S0_8CH_TX>;
+	assigned-clock-rates = <12288000>;
+	#sound-dai-cells = <0>;
+};
+
+/***************************** C  PU ********************************/
+&cpu0 {
+	cpu-supply = <&vdd_arm>;
+};
+
+/***************************** ADC ********************************/
+&saradc {
+	status = "okay";
+	vref-supply = <&vcc_1v8>;
+};
+
+&tsadc {
+	status = "okay";
+};
+
+/***************************** CSI ********************************/
+&csi2_dphy_hw {
+	status = "okay";
+};
+
+&csi2_dphy0 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			csi_dphy_input3: endpoint@3 {
+				reg = <3>;
+				remote-endpoint = <&imx219_out>;
+				data-lanes = <1 2>;
+			};
+
+		};
+
+		port@1 {
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			csi_dphy_output: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&mipi_csi2_input>;
+			};
+		};
+	};
+};
+
+/* I2C3: ES8389音频编解码器 */
+&i2c3 {
+	status = "okay";
+	clock-frequency = <400000>;  // 400kHz I2C频率
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c3m1_xfer>;
+	
+	focaltech@38 { 
+		compatible = "focaltech,fts";	
+		reg = <0x38>;  					
+		interrupt-parent = <&gpio1>;				
+		interrupts = <RK_PC7 IRQ_TYPE_EDGE_FALLING>;
+		focaltech,reset-gpio = <&gpio1 RK_PC6 GPIO_ACTIVE_LOW>;
+		focaltech,irq-gpio = <&gpio1 RK_PC7 IRQ_TYPE_LEVEL_LOW>; 
+
+		focaltech,max-touch-number = <5>;			
+		focaltech,display-coords =  <0 0 240 320>;
+		focaltech,rotate = <270>;
+	};
+
+	es8389: es8389@10{
+		status = "okay";
+		compatible = "everest,es8389";
+		reg = <0x10>;
+		clocks = <&cru MCLK_I2S0_8CH_TX>;
+		clock-names = "mclk";
+		assigned-clocks = <&cru MCLK_I2S0_8CH_TX>;
+		assigned-clock-rates = <12288000>;
+		#sound-dai-cells = <0>;
+	};
+
+	/* ICP20100气压和温度传感器 */
+	icp20100: icp20100@63 {
+		compatible = "invensense,icp20100";
+		reg = <0x63>;
+		vdd-supply = <&vcc_3v3>;  /* 电源供应 */
+	};
+
+	qmi8658a: qmi8658a@6a{
+		status = "okay";
+		compatible = "qst,qmi8658";
+		reg = <0x6a>;
+		qst,layout = <0x01>;
+		qst,auto-report;
+		vdd-supply = <&vcc_3v3>;
+		vddio-supply = <&vcc_3v3>;
+		interrupt-parent = <&gpio0>;
+		interrupts = <RK_PA6 IRQ_TYPE_EDGE_RISING>;
+		interrupt-names = "INT1";
+		mount-matrix = "1", "0", "0",
+			       "-1", "0", "0",
+			       "0", "0", "1";
+	};
+
+	mpr121: mpr121@5a {
+		compatible = "fsl,mpr121-touchkey";
+		reg = <0x5a>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <RK_PB0 IRQ_TYPE_EDGE_FALLING>;  /* 下降沿触发，与驱动代码一致 */
+		interrupt-names = "touchkey";
+		vdd-supply = <&vcc_3v3>;
+		linux,keycodes = <KEY_1 KEY_2 KEY_3>;
+		wakeup-source;
+	};
+};
+
+&i2c4 {
+	status = "okay";
+	clock-frequency = <400000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c4m2_xfer>;
+
+	imx219: imx219@10 {
+		compatible = "sony,imx219";
+		status = "okay";
+		reg = <0x10>;
+
+		clocks = <&cru MCLK_REF_MIPI0>;
+
+
+		clock-names = "xvclk";
+		assigned-clocks = <&cru MCLK_REF_MIPI0>;
+        assigned-clock-rates = <24000000>;
+
+		pwdn-gpios = <&gpio3 RK_PC5 GPIO_ACTIVE_HIGH>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&mipi_refclk_out0>;
+		rockchip,camera-module-index = <0>;
+		rockchip,camera-module-facing = "back";
+		rockchip,camera-module-name = "default";
+		rockchip,camera-module-lens-name = "default";
+		
+		port {
+			imx219_out: endpoint {
+				remote-endpoint = <&csi_dphy_input3>;
+				data-lanes = <1 2>;
+				link-frequencies = /bits/ 64 <456000000>;
+			};
+		};
+	};
+};
+
+&mipi0_csi2 {
+	status = "okay";
+
+	ports {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		port@0 {
+			reg = <0>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			mipi_csi2_input: endpoint@1 {
+				reg = <1>;
+				remote-endpoint = <&csi_dphy_output>;
+			};
+		};
+
+		port@1 {
+			reg = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			mipi_csi2_output: endpoint@0 {
+				reg = <0>;
+				remote-endpoint = <&cif_mipi_in>;
+			};
+		};
+	};
+};
+
+&rkcif {
+	status = "okay";
+};
+
+&rkcif_mipi_lvds {
+	status = "okay";
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&mipi_pins>;
+	port {
+		/* MIPI CSI-2 endpoint */
+		cif_mipi_in: endpoint {
+			remote-endpoint = <&mipi_csi2_output>;
+		};
+	};
+};
+
+&rkcif_mipi_lvds_sditf {
+	status = "okay";
+
+	port {
+		/* MIPI CSI-2 endpoint */
+		mipi_lvds_sditf: endpoint {
+			remote-endpoint = <&isp_in>;
+		};
+	};
+};
+
+&rkisp {
+	status = "okay";
+	memory-region = <&rkisp_reserved>;
+};  
+
+&rkisp_vir0 {
+	status = "okay";
+
+	port@0 {
+		isp_in: endpoint {
+			remote-endpoint = <&mipi_lvds_sditf>;
+		};
+	};
+};
+
+
+/*****************************PINCTRL********************************/
+// UART bluetooth
+&uart0 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart0m1_xfer &uart0m1_rtsn &uart0m1_ctsn>;
+	dma-names = "tx", "rx";
+	
+	bluetooth {
+		compatible = "realtek,rtl8723bs-bt";
+		max-speed = <1500000>;
+		status = "okay";
+	};
+};
+
+&pwm2{
+	status = "okay";  /* 启用PWM2，用于WS2812 PWM+DMA控制 */
+	pinctrl-0 = <&pwm2m0_pins>;  /* 配置为PWM2M0模式，对应GPIO0A1 */
+};
+
+//i2s
+&pinctrl {
+	// I2S0 M0 引脚配置
+	i2s0 {
+		i2s0_sclk: i2s0-sclk {
+			rockchip,pins = <2 RK_PA0 2 &pcfg_pull_none>;
+		};
+		
+		i2s0_lrck: i2s0-lrck {
+			rockchip,pins = <2 RK_PA1 2 &pcfg_pull_none>;
+		};
+
+		i2s0_sdo0: i2s0-sdo0 {
+			rockchip,pins = <2 RK_PA4    2 &pcfg_pull_none>;
+		};
+
+		i2s0_mclk: i2s0-mclk {
+			rockchip,pins = <2 RK_PA2 2 &pcfg_pull_none>;
+		};
+		
+		i2s0_sdi0: i2s0-sdi0 {
+			rockchip,pins = <2 RK_PA5 2 &pcfg_pull_none>;
+		};		
+	};
+};
+
+//功放
+&gpio2 {
+    gongfang_gpio: gongfang-enable-gpio {
+        gpio-hog;
+        gpios = <3 GPIO_ACTIVE_HIGH>;
+        output-high;
+        line-name = "gongfang_enable";
+    };
+};
+
+&gpio0 {
+	pmic_pwr_ctrl_gpio: pmic-pwr-ctrl-gpio {
+		gpio-hog;
+        gpios = <RK_PA3 GPIO_ACTIVE_LOW>;
+        output-low;
+        line-name = "pmic-pwr-ctrl";
+	};
+};
