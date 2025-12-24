@@ -1,0 +1,128 @@
+/************************************WIFI******************************************/
+看别名映射
+cat /proc/device-tree/aliases/mmc2
+cat /sys/kernel/debug/pinctrl/pinctrl-rockchip-pinctrl/pinmux-pins | grep "sdmmc1\|35\|uart0"
+cat /sys/kernel/debug/mmc2/ios
+dmesg | grep -Ei "mmc2|8723|SDIO"
+cat /sys/kernel/debug/gpio | grep 35
+
+echo ff9a0000.mmc2 > /sys/bus/platform/drivers/dwmmc_rockchip/unbind
+sleep 1
+echo ff9a0000.mmc2 > /sys/bus/platform/drivers/dwmmc_rockchip/bind
+
+
+devmem 0xff460008 32 0x08   # GPIO1_A3 输出高
+sleep 1
+devmem 0xff460004 32 0x08   # 设置为输出方向
+
+cat /sys/kernel/debug/gpio | grep -E "35|wl|reset"
+
+#检查网络状态
+wpa_cli -i wlan0 status
+
+##########配网wifi###########
+ifconfig wlan0 up
+vi /etc/wpa_supplicant.conf
+
+ictrl_interface=/var/run/wpa_supplicant
+update_config=1
+country=CN
+pmf=1
+network={
+    ssid="yf"
+    psk="yf123456"
+    key_mgmt=WPA-PSK
+    proto=RSN
+    pairwise=CCMP
+    group=CCMP
+}
+
+
+
+iw wlan0 scan | grep SSID
+
+#切换wifi
+killall -9 wpa_supplicant
+mkdir -p /var/run/wpa_supplicant
+wpa_supplicant -B -c /etc/wpa_supplicant.conf -i wlan0
+udhcpc -i wlan0 -q
+
+
+##########配网wifi############
+
+
+
+/************************************WIFI******************************************/
+
+/************************************蓝牙******************************************/
+
+/**********************************开启蓝牙***********************************/
+/***************************************开发板***********************************/
+#!/bin/sh
+hciconfig hci0 up
+hciconfig hci0 piscan
+hciconfig hci0 name "RV1106"
+hciconfig hci0 class 0x5A020C
+hciconfig hci0 noauth
+hciconfig hci0 noencrypt
+
+killall bluetoothd 2>/dev/null
+/usr/libexec/bluetooth/bluetoothd --compat -n &
+bluetoothctl list
+
+sleep 2
+sdptool add SP
+rfcomm -r listen hci0 1 &
+
+/mnt/share/bt_wifi_provision &   # 按你实际路径改
+/***************************************开发板***********************************/
+/***************************************PC***********************************/
+rfcomm release all
+sudo rfcomm -r connect hci0 34:20:03:CB:E4:32 1
+echo "hello from PC" | sudo tee /dev/rfcomm0
+printf '{"SSID":"yf","PWD":"yf123456"}\n' | sudo tee /dev/rfcomm0
+sudo pkill -9 -f "rfcomm.*34:20:03:CB:E4:32"
+
+# 删除错误的普通文件
+sudo rm /dev/rfcomm0
+
+# 确认文件已被删除
+ls -la /dev/rfcomm*
+/***************************************PC***********************************/
+# 启动蓝牙 HCI（Realtek 的 hciattach）
+hciattach /dev/ttyS2 rtk_h5 115200 noflow &
+sleep 2
+
+# 启动蓝牙协议栈
+hciconfig hci0 up
+hcitool dev
+hcitool scan
+hciconfig hci0 name "PANGHU_RV1106"
+hciconfig hci0 piscan
+
+
+/usr/libexec/bluetooth/bluetoothd -n -d -C &
+sdptool add SP
+sdptool browse local | grep -A3 "Serial Port"
+rfcomm listen 0 1 &
+rfcomm -a
+ls -l /dev/rfcomm*
+
+用 bluetoothctl
+bluetoothctl
+power on
+agent NoInputNoOutput
+default-agent
+pairable on
+discoverable on
+discoverable-timeout 0
+power on：打开 hci0
+
+pairable on：允许被配对
+
+discoverable on：允许被扫描到
+
+discoverable-timeout 0：永久可发现（不自动关）
+
+
+/************************************蓝牙******************************************/

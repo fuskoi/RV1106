@@ -1,0 +1,43 @@
+# 设置DCDC4为1.35V
+i2cset -y 3 0x34 0x85 0x4D b
+
+# 设置ALDO1为1.8V
+i2cset -y 3 0x34 0x92 0x0D b
+
+# 设置ALDO2为2.8V
+i2cset -y 3 0x34 0x93 0x17 b
+
+# 设置ALDO3为3.3V
+i2cset -y 3 0x34 0x94 0x1C b
+
+# 设置ALDO4为2.9V
+i2cset -y 3 0x34 0x95 0x18 b
+
+# 使能所有ALDO（ALDO1-4）
+i2cset -y 3 0x34 0x90 0x0F b
+
+/************************************充电设置*************************************/
+
+#!/bin/sh
+BUS=3
+ADDR=0x34
+
+# 1) VINDPM 4.36V
+i2cset -y $BUS $ADDR 0x15 0x06
+
+# 2) 输入限流：
+i2cset -y $BUS $ADDR 0x16 0x03   
+
+# 3) 预充/快充：
+i2cset -y $BUS $ADDR 0x61 0x02
+i2cset -y $BUS $ADDR 0x62 0x0B
+
+# 4) 终止电流：
+R63=$(i2cget -y $BUS $ADDR 0x63)
+NEW63=$(printf "0x%02X" $(( (R63 & 0xF0) | 0x01 ))) 
+i2cset -y $BUS $ADDR 0x63 $NEW63
+
+# 5) 可选：ADC 全开
+i2cset -y $BUS $ADDR 0x30 0x1F
+
+i2cset -y $BUS $ADDR 0x14 0x05

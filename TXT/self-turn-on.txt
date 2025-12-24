@@ -1,0 +1,223 @@
+/**************************************************************************************************/
+
+vi /etc/init.d/S03aduio
+i#!/bin/sh
+CARD=0
+
+# ==== 基础清场 ====
+amixer -c$CARD cset name='I2STDM Digital Loopback Mode' 'Disabled'
+amixer -c$CARD cset name='ADC Mixer DACL ADCL Mixer' off
+amixer -c$CARD cset name='ADC Mixer DACR ADCR Mixer' off
+amixer -c$CARD cset name='IF ADCDACL Mixer ADCL DACL Mixer' off
+amixer -c$CARD cset name='IF ADCDACR Mixer ADCR DACR Mixer' off
+amixer -c$CARD cset name='IF DACL Mixer DACR DACL Mixer' off
+amixer -c$CARD cset name='IF DACR Mixer DACL DACR Mixer' off
+
+# ==== 播放：板载喇叭立体声 ====
+amixer -c$CARD cset name='OUTL MUX' 'Normal'
+amixer -c$CARD cset name='OUTR MUX' 'Normal'
+amixer -c$CARD cset name='DACL Playback Volume' 150
+amixer -c$CARD cset name='DACR Playback Volume' 150
+amixer -c$CARD cset name='DAC OUTPUT Invert Switch' off
+
+# ==== 录音：双单端麦立体声 ====
+amixer -c$CARD cset name='ADC MUX' 'AMIC'
+amixer -c$CARD cset name='PGAL Select' 'Line 1P'
+amixer -c$CARD cset name='PGAR Select' 'Line 2P'
+amixer -c$CARD cset name='ADCL PGA Volume' 10
+amixer -c$CARD cset name='ADCR PGA Volume' 10
+amixer -c$CARD cset name='ADCL Capture Volume' 255
+amixer -c$CARD cset name='ADCR Capture Volume' 255
+amixer -c$CARD cset name='ADC OUTPUT Invert Switch' off
+amixer -c$CARD cset name='ALC Capture Switch' 'ALC OFF' 2>/dev/null || true
+
+echo "Audio init: stereo speaker + stereo mic done."
+
+aplay /mnt/share/xindiqiu.wav
+
+chmod +x /etc/init.d/S03aduio
+while true; do
+aplay /mnt/share/wenai.wav;
+mpg123 /mnt/share/zhiwo.mp3;
+mpg123 /mnt/share/buchao.mp3;
+mpg123 /mnt/share/duoyu.mp3;
+mpg123 /mnt/share/wodetiankong.mp3;
+mpg123 /mnt/share/angel.mp3;
+mpg123 /mnt/share/guochangye.mp3;
+mpg123 /mnt/share/gouai.mp3;
+done &
+
+chmod +x /etc/init.d/S03aduio
+
+mkdir -p /mnt/share
+cd /mnt/share
+
+cd ~/..
+
+./etc/init.d/S03aduio
+
+/**************************************************************************************************/
+
+/********************************************mount -t debugfs none /sys/kernel/debug 2>/dev/null || true***********************************************************/
+vi /etc/init.d/S00-debugfs
+
+#!/bin/sh -e
+mount -t debugfs none /sys/kernel/debug 2>/dev/null || true
+exit 0
+
+chmod +x /etc/init.d/S00-debugfs
+/etc/init.d/S00-debugfs start
+
+/********************************************mount -t debugfs none /sys/kernel/debug 2>/dev/null || true***********************************************************/
+
+
+/***************************************************开机小智***********************************************************/
+
+#!/bin/sh
+exec >/tmp/autowifi.log 2>&1
+set -x
+
+# ▒.▒定库路径
+export LD_LIBRARY_PATH=/oem/usr/lib:/lib:/usr/lib
+
+# 等 wlan0
+for i in $(seq 1 60); do
+  ip link show wlan0 >/dev/null 2>&1 && break
+  sleep 1
+done
+ip link show wlan0 || { echo "wlan0 not ready"; exit 0; }
+
+# 等 main
+for i in $(seq 1 120); do
+  [ -x /mnt/share/bin/main ] && break
+  sleep 1
+done
+[ -x /mnt/share/bin/main ] || { echo "main not ready"; exit 0; }
+
+# 拉起接口
+ip link set wlan0 up || true
+sleep 1
+
+# 启动 main（后台、脱离 tty）
+cd /mnt/share/bin || exit 0
+nohup ./main </dev/null >/tmp/main.log 2>&1 &
+echo "main_started, pid=$!"
+
+exit 0
+
+
+/***************************************************开机小智***********************************************************/
+
+
+/********************************************PMIC 电压修改***********************************************************/
+mkdir -p /etc/init.d
+vi /etc/init.d/S99tg28-pmic
+i#!/bin/sh
+# TG28 PMIC配置启动脚本
+
+case "$1" in
+    start)
+        echo "配置TG28 PMIC..."
+        
+        # 等待系统稳定
+        sleep 3
+        
+        # 配置TG28 PMIC
+        i2cset -y 3 0x34 0x85 0x4D b  # DCDC4 = 1.35V
+        i2cset -y 3 0x34 0x92 0x0D b  # ALDO1 = 1.8V
+        i2cset -y 3 0x34 0x93 0x17 b  # ALDO2 = 2.8V
+        i2cset -y 3 0x34 0x94 0x1C b  # ALDO3 = 3.3V
+        i2cset -y 3 0x34 0x95 0x07 b  # ALDO4 = 1.2V
+        i2cset -y 3 0x34 0x90 0x0F b  # 使能所有ALDO
+        
+        echo "TG28 PMIC配置完成"
+        ;;
+    stop)
+        echo "停止TG28 PMIC配置服务"
+        ;;
+    restart)
+        $0 stop
+        $0 start
+        ;;
+    *)
+        echo "用法: $0 {start|stop|restart}"
+        exit 1
+        ;;
+esac
+
+mount -t debugfs none /sys/kernel/debug 2>/dev/null || true
+
+exit 0
+
+chmod +x /etc/init.d/S99tg28-pmic
+/etc/init.d/S99tg28-pmic start
+
+
+/********************************************PMIC 电压修改***********************************************************/
+
+电压设置对应关系：
+
+ALDO1 (0x92): 0x0D = 13 → 0.5V + 13×0.1V = 1.8V
+
+ALDO2 (0x93): 0x17 = 23 → 0.5V + 23×0.1V = 2.8V
+
+ALDO3 (0x94): 0x1C = 28 → 0.5V + 28×0.1V = 3.3V
+
+ALDO4 (0x95): 0x07 = 7 → 0.5V + 7×0.1V = 1.2V
+
+
+//实时读取电压
+#!/bin/sh
+
+BUS=3
+ADDR=0x34
+
+# 读 14bit ADC 并换算成 mV
+read_adc_mv() {
+    H=$(i2cget -y $BUS $ADDR $1)
+    L=$(i2cget -y $BUS $ADDR $2)
+
+    # 去掉 0x 前缀
+    H=${H#0x}
+    L=${L#0x}
+
+    RAW=$(( (0x$H << 8) | 0x$L ))
+    MV=$(( RAW & 0x3FFF ))   # 14bit mask
+
+    echo $MV
+}
+
+# 读取 VINDPM 设置（mV）
+read_vindpm_mv() {
+    REG15=$(i2cget -y $BUS $ADDR 0x15)
+    REG15=${REG15#0x}
+    STEP=$((0x$REG15))
+    # VINDPM = 3.88V + STEP*0.08V
+    echo $((3880 + STEP * 80))
+}
+
+VINDPM=$(read_vindpm_mv)
+
+echo "VINDPM = $(printf "%.2f" $(echo "$VINDPM/1000" | bc -l)) V"
+echo "Press Ctrl+C to stop"
+echo "------------------------------------------"
+
+while true; do
+    VBAT=$(read_adc_mv 0x34 0x35)
+    VBUS=$(read_adc_mv 0x38 0x39)
+    VSYS=$(read_adc_mv 0x3A 0x3B)
+
+    printf "VBAT=%4.3f V  VBUS=%4.3f V  VSYS=%4.3f V" \
+        $(echo "$VBAT/1000" | bc -l) \
+        $(echo "$VBUS/1000" | bc -l) \
+        $(echo "$VSYS/1000" | bc -l)
+
+    # 判断是否接近 VINDPM（100mV 内提示）
+    if [ $VBUS -le $((VINDPM + 100)) ] && [ $VBUS -ge $((VINDPM - 100)) ]; then
+        echo "  ⚠ 接近 VINDPM，可能开始降充电电流"
+    else
+        echo ""
+    fi
+
+    sleep 1
+done

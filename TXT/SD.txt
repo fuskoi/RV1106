@@ -1,0 +1,60 @@
+/**********SDMMC**********/
+&sdmmc {
+	status = "okay";
+	max-frequency = <50000000>;
+	no-sdio;
+	no-mmc;
+	bus-width = <4>;
+	cap-mmc-highspeed;
+	cap-sd-highspeed;
+	disable-wp;
+	pinctrl-names = "default";
+	pinctrl-0 = <&sdmmc0_clk &sdmmc0_cmd &sdmmc0_det &sdmmc0_bus4>;
+};
+/**********SDMMC**********/
+
+/*******************创建分区和文件系统*******************/
+# 使用fdisk创建分区
+fdisk /dev/mmcblk1
+n    # 新建分区
+p    # 主分区
+1    # 分区号1
+     # 起始扇区（直接回车使用默认值）
+     # 结束扇区（直接回车使用整个磁盘）
+w    # 写入并退出
+
+格式化分区为FAT32文件系统
+使用ext4文件系统（Linux系统更适用）
+mkfs.ext4 /dev/mmcblk1p1
+# 创建挂载点
+mkdir -p /mnt/sdcard
+# 挂载SD卡
+mount /dev/mmcblk1p1 /mnt/sdcard
+# 验证挂载
+df -h | grep sdcard
+/*******************创建分区和文件系统*******************/
+
+/**************************读写测试*************************/
+# 进入挂载点
+cd /mnt/sdcard
+
+# 测试文件写入
+echo "SD卡读写测试成功！时间: $(date)" > test.txt
+
+# 测试文件读取
+cat test.txt
+
+# 测试目录创建
+mkdir test_dir
+echo "目录创建测试" > test_dir/dir_test.txt
+
+# 列出所有文件
+ls -la
+
+# 测试文件复制
+cp /etc/hostname ./
+cat hostname
+
+# 清理测试文件
+rm -rf test.txt test_dir hostname
+/**************************读写测试*************************/

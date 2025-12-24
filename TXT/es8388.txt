@@ -1,0 +1,89 @@
+//es8388检查流程
+i2cdetect -y 3
+mount -t debugfs none /sys/kernel/debug 2>/dev/null || true
+cat /sys/kernel/debug/pinctrl/pinctrl-rockchip-pinctrl/pinmux-pins | grep "i2s0\|i2c\|67"
+cat /proc/asound/cards
+dmesg | grep -i "es8390\|audio\|codec"
+cat /sys/kernel/debug/clk/clk_summary | grep -i "i2s\|mclk"
+ls -la /dev/snd/
+cat /sys/kernel/debug/pinctrl/pinctrl-handles | grep -A20 ffae0000.i2s
+aplay -D hw:0,0 /mnt/share/demo.wav
+
+arecord -D hw:0,0 -r 48000 -f S16_LE -c 2 -d 5 /mnt/share/mic_5s.wav
+
+//实时转码mp3->wav
+ffmpeg -i 、/mnt/share/mingri.flac -f wav - | aplay
+
+
+# 强制写（-f），因为驱动已经占着 0x10 了
+i2cset -f -y 3 0x10 0x00 0x80 b
+sleep 0.1
+i2cset -f -y 3 0x10 0x00 0x00 b
+
+
+# 查看所有简单控制器名称
+amixer scontrols
+
+# 或者查看所有内容并按名称过滤
+amixer contents | grep -i volume
+amixer contents | grep -i playback
+amixer contents | grep -i capture
+
+
+# 使用numid设置各个音量控制器到50%
+
+# DAC播放音量 (numid=16,17) - 范围0-255
+amixer cset numid=16 255
+amixer cset numid=17 255
+
+# ADC OSR音量 (numid=14) - 范围0-255
+amixer cset numid=14 128
+
+# ADC捕获音量 (numid=2,3) - 范围0-255
+amixer cset numid=2 255
+amixer cset numid=3 255
+
+# ADC2DAC混音器音量 (numid=19) - 范围0-127
+amixer cset numid=19 64
+
+# PGA音量 (numid=4,5) - 范围0-14
+amixer cset numid=4 7
+amixer cset numid=5 7
+
+# ALC设置 (numid=10,9) - 范围0-15
+amixer cset numid=10 8
+amixer cset numid=9 8
+
+# ADC OSR音量开关 (numid=13) - 需要两个值
+amixer cset numid=13 1,1
+
+
+# 1. 打开 DAC 到喇叭的输出路径
+amixer -c0 cset name='OUTL MUX' 'Normal'
+amixer -c0 cset name='OUTR MUX' 'Normal'
+
+# 2. 打开 DAC 输出口到 LOUT/ROUT（即板载喇叭）
+amixer -c0 cset name='IF DACL Mixer DACR DACL Mixer' on
+amixer -c0 cset name='IF DACR Mixer DACL DACR Mixer' on
+
+https://chat.deepseek.com/share/v0mnwdw7d3cgelcomr
+
+# 3. 关闭耳机输出混音避免分流
+amixer -c0 cset name='ADC Mixer DACL ADCL Mixer' off
+amixer -c0 cset name='ADC Mixer DACR ADCR Mixer' off
+
+# 4. 提高一点 DAC 音量
+amixer -c0 cset name='DACL' 200
+amixer -c0 cset name='DACR' 200
+
+
+# 左喇叭音量（0~255）
+amixer -c0 cset name='DACL Playback Volume' 130
+
+# 右喇叭音量（0~255）
+amixer -c0 cset name='DACR Playback Volume' 130
+
+arecord -D hw:0,0 -r 48000 -f S16_LE -c 2 -d 5 stereo_mic.wav
+
+
+https://chatgpt.com/s/t_692e7b02563c8191992f1fd9edba0994

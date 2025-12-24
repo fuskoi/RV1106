@@ -1,0 +1,40 @@
+//本地推流情况查看
+v4l2-ctl -d /dev/video12 \
+  --set-fmt-video=width=640,height=360,pixelformat=NV12 \
+  --stream-mmap --stream-count=200
+
+
+ssh-keygen -R 172.32.0.93
+ssh root@172.32.0.93
+
+//cmd测试命令
+ssh root@172.32.0.93 ^
+  "v4l2-ctl -d /dev/video12 --set-fmt-video=width=1280,height=720,pixelformat=NV12 --stream-mmap --stream-count=0 --stream-to=-" ^
+  | ffplay -fflags nobuffer -flags low_delay -framerate 60 -f rawvideo -pixel_format nv12 -video_size 1280x720 -
+
+//加载isp文件
+rkaiq_3A_server &
+
+//录制视频
+ffmpeg -f v4l2 -i /dev/video0 -t 5 /mnt/sdcard/test.h264
+
+v4l2-ctl -d /dev/video11 \
+  --set-fmt-video=width=1920,height=1080,pixelformat=NV12 \
+  --stream-mmap=8 \
+  --stream-count=300 \
+  --stream-to=/mnt/sdcard/rec_1080p_nv12.raw
+sync
+
+
+ffmpeg \
+  -f rawvideo \
+  -pix_fmt nv12 \
+  -s 1920x1080 \
+  -r 30 \
+  -i rec_1080p_nv12.raw \
+  -c:v libx264 \
+  -profile:v high \
+  -level 4.0 \
+  -pix_fmt yuv420p \
+  -movflags +faststart \
+  out.mp4

@@ -1,0 +1,79 @@
+#github密钥
+bNWsjdjXsE6yW8WqffPMZKGmf2TREdw
+
+#chatgpt账号
+lofarmcompbasec@mail.com ----xzxlipQJ7r----Aa12345678910
+账号----邮箱密码---登录密码
+需要验证码就打开mail.com这个网址 
+
+#进入交叉编译环境        
+source ~/.bashrc
+
+//adb登录usb链接的开发板
+adb devices
+adb shell
+
+//编译内核模块
+make modules
+
+sudo chown -R jj:jj .
+把工程改为用户权限
+
+#adb传输文件到开发板
+adb connect 172.32.0.93:5555
+adb -s 172.32.0.93:5555 push "demo.wav" /mnt/share
+
+//内核驱动修改保存
+make echo_rv1106_linux_defconfig
+make savedefconfig
+cp defconfig arch/arm/configs/echo_rv1106_linux_defconfig
+
+make  panghu_v1_rv1106_kernel_defconfig
+
+//挂载i2c设备
+echo 3-0010 > /sys/bus/i2c/drivers/es8389/unbind 2>/dev/null
+echo 3-0010 > /sys/bus/i2c/drivers/es8389/bind 2>/dev/null
+
+# 查看所有可用的 pinmux functions（看 function 与 group 名的对应）
+cat /sys/kernel/debug/pinctrl/pinctrl-rockchip-pinctrl/pinmux-functions
+
+//dmesg导入到log.txt
+dmesg > log.txt
+less log.txt
+
+//查看内核驱动开启情况
+zcat /proc/config.gz | grep 
+
+//查看引脚配置
+cat /sys/kernel/debug/pinctrl/pinctrl-rockchip-pinctrl/pinmux-pins
+
+//查看内核设备树的行数
+sed -n '1160,1200p' /tmp/live.dts 
+
+//查看设备树的情况
+cat /sys/kernel/debug/gpio | sed -n '1,200p' | grep -n -E 'gpio-35|gpio1.*A3|WL|wl|reg_on'
+
+//查看GPIO的使能情况
+cat /sys/kernel/debug/gpio
+
+//查看文件夹大小
+du -sh .
+
+//glibc
+export PATH=~/gcc-arm-11.2-2022.02-x86_64-arm-none-linux-gnueabihf/bin:$PATH
+which arm-none-linux-gnueabihf-gcc
+
+//看板载
+readlink .BoardConfig.mk
+
+//创建串口0
+mknod /dev/ttyS0 c 4 64
+chmod 666 /dev/ttyS0
+ls -l /dev/ttyS0
+
+
+mount -t debugfs none /sys/kernel/debug 2>/dev/null || true
+
+https://chatgpt.com/s/t_692d2a69afcc819199c448083ad25e3e
+
+https://chatgpt.com/s/t_693299da1f648191a797a8fa1e12ba34

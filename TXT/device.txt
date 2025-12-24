@@ -1,0 +1,35 @@
+/********************qmi8658*********************/
+//看设备节点
+ls /sys/bus/iio/devices
+# 通常会有 iio:device0、iio:device1 等
+cd /sys/bus/iio/devices/iio:device0
+ls
+
+# 检查 device1
+cat /sys/bus/iio/devices/iio:device1/name
+ls /sys/bus/iio/devices/iio:device1/
+
+# 一次性查看所有IIO设备信息
+for dev in /sys/bus/iio/devices/iio:device*; do
+    echo "=== $dev ==="
+    cat $dev/name 2>/dev/null || echo "No name file"
+    ls $dev/ | grep -E "(accel|gyro|anglvel)" || echo "No IMU files"
+    echo
+done
+
+#input 设备列表
+cat /proc/bus/input/devices
+
+//查看数据
+hexdump -C /dev/input/event1
+
+cat /proc/kmsg | grep qmi8658_gyro_read_raw:
+
+//*******************************************************icp20100
+ls /sys/bus/iio/devices
+for d in /sys/bus/iio/devices/iio:device*; do
+    echo "$d: $(cat $d/name 2>/dev/null)"
+done
+
+
+//*******************************************************mpr121
