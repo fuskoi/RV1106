@@ -36,28 +36,60 @@
 		};
 	};
 
-	/* ES8389音频编解码器声卡 - 配置为两个单端麦克风和双声道立体声喇叭 */
-	es8389_sound: es8389-sound {
-		status = "okay";
-		compatible = "simple-audio-card";
-		simple-audio-card,name = "rv1106-es8389";
-		simple-audio-card,format = "i2s";
-		simple-audio-card,mclk-fs = <256>;
-		simple-audio-card,bitclock-master = <&i2s0_8ch>;
-		simple-audio-card,frame-master = <&i2s0_8ch>;
-		//spk-con-gpio = <&gpio2 RK_PA3 GPIO_ACTIVE_HIGH>;
-		rockchip,audio-routing =
-			/* 双声道立体声喇叭输出 - 左声道和右声道分别连接到LOUT2和ROUT2 */
-			"Speaker", "LOUT2",
-			"Speaker", "ROUT2",
-			"Speaker", "Speaker Power",
-			"Speaker", "Speaker Power",
-			/* 两个单端麦克风输入 - 左麦克风连接到LINPUT1，右麦克风连接到RINPUT1 */
-			"LINPUT1", "Left Mic",
-			"RINPUT1", "Right Mic";
-		dai_cpu: simple-audio-card,cpu {sound-dai = <&i2s0_8ch>;};
-		simple-audio-card,codec {sound-dai = <&es8389>;};
+	es8389_es7210_sound: es8389-es7210-sound {
+    	status = "okay";
+    	compatible = "rockchip,multicodecs-card";
+    	rockchip,card-name = "rv1106_sound";
+    	rockchip,format = "dsp_a";
+    	rockchip,mclk-fs = <256>;
+		rockchip,cpu = <&i2s0_8ch>;
+		rockchip,codec = <&es8389>, <&es7210>;
+    	/* ES8389播放路由 - 连接到Speaker */
+    	rockchip,audio-routing =
+    	    "Speaker", "HPOL",
+    	    "Speaker", "HPOR";
 	};
+
+
+	/* ES7210 麦克风阵列 ADC 声卡配置 - 4通道麦克风输入 */
+	//es7210_sound: es7210-sound {
+	//	status = "okay";
+	//	compatible = "simple-audio-card";
+	//	simple-audio-card,format = "dsp_a";  /* ES7210使用TDM模式，应该用dsp_a */
+	//	simple-audio-card,mclk-fs = <256>;
+	//	simple-audio-card,name = "rockchip-es7210";
+	//	simple-audio-card,bitclock-master = <&i2s0_8ch>;
+	//	simple-audio-card,frame-master = <&i2s0_8ch>;
+	//	simple-audio-card,cpu {
+	//		sound-dai = <&i2s0_8ch>;
+	//		dai-tdm-slot-num = <4>;
+	//		dai-tdm-slot-width = <32>;
+	//		dai-tdm-slot-tx-mask = <1 1 1 1>;  /* 启用4个时隙用于4路麦克风 */
+	//	};
+	//	simple-audio-card,codec {sound-dai = <&es7210>;};
+	//};
+
+	/* ES8389音频编解码器声卡 - 配置为两个单端麦克风和双声道立体声喇叭 */
+	//rv1106_8389_sound: rv1106-8389-sound {
+	//	status = "okay";
+	//	compatible = "simple-audio-card";
+	//	simple-audio-card,name = "rv1106_8389_sound";
+	//	simple-audio-card,format = "i2s";
+	//	simple-audio-card,mclk-fs = <256>;
+	//	simple-audio-card,bitclock-master = <&i2s0_8ch>;
+	//	simple-audio-card,frame-master = <&i2s0_8ch>;
+	//	rockchip,audio-routing =
+	//		/* 双声道立体声喇叭输出 - 左声道和右声道分别连接到LOUT2和ROUT2 */
+	//		"Speaker", "LOUT2",
+	//		"Speaker", "ROUT2",
+	//		"Speaker", "Speaker Power",
+	//		"Speaker", "Speaker Power",
+	//		/* 两个单端麦克风输入 - 左麦克风连接到LINPUT1，右麦克风连接到RINPUT1 */
+	//		"LINPUT1", "Left Mic",
+	//		"RINPUT1", "Right Mic";
+	//	dai_cpu: simple-audio-card,cpu {sound-dai = <&i2s0_8ch>;};
+	//	simple-audio-card,codec {sound-dai = <&es8389>;};
+	//};
 
 	vcc_1v8: vcc-1v8 {
 		compatible = "regulator-fixed";
@@ -124,7 +156,7 @@
 		long-press-time = <1000>;       /* 长按时间 */
 		debounce-time = <20>;            /* 消抖时间 */
 		
-		status = "okay";
+		status = "disabled";
 	};
 
 	/* WS2812 LED驱动 - 使用PWM2M0接口，PWM+DMA方式 */
@@ -171,7 +203,7 @@
 &i2s0_8ch {
 	status = "okay";
 	rockchip,clk-trcm = <1>;
-	rockchip,io-func = <1>;
+	rockchip,io-multiplex = <1>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2s0_sclk &i2s0_lrck &i2s0_sdi0 &i2s0_sdo0 &i2s0_mclk>;
 	assigned-clocks = <&cru MCLK_I2S0_8CH_TX>;
@@ -179,7 +211,7 @@
 	#sound-dai-cells = <0>;
 };
 
-/***************************** C  PU ********************************/
+/***************************** CPU ********************************/
 &cpu0 {
 	cpu-supply = <&vdd_arm>;
 };
@@ -232,13 +264,12 @@
 	};
 };
 
-/* I2C3: ES8389音频编解码器 */
 &i2c3 {
 	status = "okay";
 	clock-frequency = <400000>;  // 400kHz I2C频率
 	pinctrl-names = "default";
 	pinctrl-0 = <&i2c3m1_xfer>;
-	
+
 	focaltech@38 { 
 		compatible = "focaltech,fts";	
 		reg = <0x38>;  					
@@ -250,6 +281,17 @@
 		focaltech,max-touch-number = <5>;			
 		focaltech,display-coords =  <0 0 240 320>;
 		focaltech,rotate = <270>;
+	};
+
+	es7210: es7210@40{
+		status = "okay";
+		#sound-dai-cells = <0>;
+		compatible = "ES7210_MicArray_0";
+		reg = <0x40>;
+		clocks = <&cru MCLK_I2S0_8CH_TX>;
+		clock-names = "mclk";
+		assigned-clocks = <&cru MCLK_I2S0_8CH_TX>;
+		assigned-clock-rates = <12288000>;
 	};
 
 	es8389: es8389@10{
@@ -265,13 +307,14 @@
 
 	/* ICP20100气压和温度传感器 */
 	icp20100: icp20100@63 {
+		status = "disabled";
 		compatible = "invensense,icp20100";
 		reg = <0x63>;
 		vdd-supply = <&vcc_3v3>;  /* 电源供应 */
 	};
 
 	qmi8658a: qmi8658a@6a{
-		status = "okay";
+		status = "disabled";
 		compatible = "qst,qmi8658";
 		reg = <0x6a>;
 		qst,layout = <0x01>;
@@ -287,6 +330,7 @@
 	};
 
 	mpr121: mpr121@5a {
+		status = "disabled";
 		compatible = "fsl,mpr121-touchkey";
 		reg = <0x5a>;
 		interrupt-parent = <&gpio1>;

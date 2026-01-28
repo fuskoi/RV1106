@@ -47,8 +47,8 @@
 #define AUTO_CONFIG_TL_ADDR		0x7f
 
 /* Threshold of touch/release trigger */
-#define TOUCH_THRESHOLD			0x08
-#define RELEASE_THRESHOLD		0x05
+#define TOUCH_THRESHOLD			0x14
+#define RELEASE_THRESHOLD		0x0A
 /* Masks for touch and release triggers */
 #define TOUCH_STATUS_MASK		0xfff
 /* MPR121 has 12 keys */
@@ -57,12 +57,17 @@
 #define MPR121_MIN_POLL_INTERVAL	10
 #define MPR121_MAX_POLL_INTERVAL	200
 
+#define MPR121_STABLE_CNT_TH   1   /* 1=最灵敏，2=平衡，3=更稳 */
+
 struct mpr121_touchkey {
 	struct i2c_client	*client;
 	struct input_dev	*input_dev;
 	unsigned int		statusbits;
 	unsigned int		keycount;
 	u32			keycodes[MPR121_MAX_KEY_COUNT];
+	u16 raw_statusbits;                  /* 原始状态（未去抖） */
+	u8  stable_cnt[MPR121_MAX_KEY_COUNT];/* 连续稳定计数 */
+	u8  last_raw[MPR121_MAX_KEY_COUNT];  /* 上次原始按下(0/1) */
 };
 
 struct mpr121_init_register {
@@ -77,8 +82,8 @@ static const struct mpr121_init_register init_reg_table[] = {
 	{ NHD_FALLING_ADDR,	0x1 },
 	{ NCL_FALLING_ADDR,	0xff },
 	{ FDL_FALLING_ADDR,	0x02 },
-	{ FILTER_CONF_ADDR,	0x04 },
-	{ AFE_CONF_ADDR,	0x0b },
+	{ FILTER_CONF_ADDR,	0x01 },  /* 减少滤波延迟，提高响应速度 */
+	{ AFE_CONF_ADDR,	0x09 },  /* 8ms采样间隔，提高响应速度（0x0b=16ms） */
 	{ AUTO_CONFIG_CTRL_ADDR, 0x0b },
 };
 
@@ -123,7 +128,6 @@ static void mpr_touchkey_report(struct input_dev *dev)
 	struct mpr121_touchkey *mpr121 = input_get_drvdata(dev);
 	struct input_dev *input = mpr121->input_dev;
 	struct i2c_client *client = mpr121->client;
-	unsigned long bit_changed;
 	unsigned int key_num;
 	int reg;
 
@@ -141,24 +145,46 @@ static void mpr_touchkey_report(struct input_dev *dev)
 	}
 
 	reg &= TOUCH_STATUS_MASK;
-	/* use old press bit to figure out which bit changed */
-	bit_changed = reg ^ mpr121->statusbits;
-	mpr121->statusbits = reg;
-	for_each_set_bit(key_num, &bit_changed, mpr121->keycount) {
-		unsigned int key_val, pressed;
 
-		pressed = reg & BIT(key_num);
-		key_val = mpr121->keycodes[key_num];
+	/* 保存原始状态（可用于调试） */
+	mpr121->raw_statusbits = reg;
 
-		input_event(input, EV_MSC, MSC_SCAN, key_num);
-		input_report_key(input, key_val, pressed);
+	/* 对每个键做"连续稳定 N 次"过滤 */
+	for (key_num = 0; key_num < mpr121->keycount; key_num++) {
+		u8 raw_pressed = !!(reg & BIT(key_num));
+		u8 stable_pressed = !!(mpr121->statusbits & BIT(key_num));
 
-		dev_dbg(&client->dev, "key %d %d %s\n", key_num, key_val,
-			pressed ? "pressed" : "released");
+		/* 状态变化时重置计数器 */
+		if (raw_pressed != mpr121->last_raw[key_num]) {
+			mpr121->last_raw[key_num] = raw_pressed;
+			mpr121->stable_cnt[key_num] = 1;
+		} else if (mpr121->stable_cnt[key_num] < MPR121_STABLE_CNT_TH) {
+			/* 状态未变化，增加稳定计数 */
+			mpr121->stable_cnt[key_num]++;
+		}
 
+		/* 状态连续稳定到阈值，且与已上报状态不同时才上报 */
+		if (mpr121->stable_cnt[key_num] >= MPR121_STABLE_CNT_TH &&
+		    raw_pressed != stable_pressed) {
+			unsigned int key_val = mpr121->keycodes[key_num];
+
+			if (raw_pressed)
+				mpr121->statusbits |= BIT(key_num);
+			else
+				mpr121->statusbits &= ~BIT(key_num);
+
+			input_event(input, EV_MSC, MSC_SCAN, key_num);
+			input_report_key(input, key_val, raw_pressed);
+
+			dev_dbg(&client->dev, "key %u %u %s (debounced)\n",
+				key_num, key_val,
+				raw_pressed ? "pressed" : "released");
+		}
 	}
+
 	input_sync(input);
 }
+
 
 static irqreturn_t mpr_touchkey_interrupt(int irq, void *dev_id)
 {
@@ -177,16 +203,16 @@ static int mpr121_phys_init(struct mpr121_touchkey *mpr121,
 	int i, t, vdd, ret;
 
 	/* Set up touch/release threshold for ele0-ele11 */
-	for (i = 0; i <= MPR121_MAX_KEY_COUNT; i++) {
+	for (i = 0; i < mpr121->keycount; i++) {
 		t = ELE0_TOUCH_THRESHOLD_ADDR + (i * 2);
 		ret = i2c_smbus_write_byte_data(client, t, TOUCH_THRESHOLD);
 		if (ret < 0)
 			goto err_i2c_write;
-		ret = i2c_smbus_write_byte_data(client, t + 1,
-						RELEASE_THRESHOLD);
+		ret = i2c_smbus_write_byte_data(client, t + 1, RELEASE_THRESHOLD);
 		if (ret < 0)
 			goto err_i2c_write;
 	}
+
 
 	/* Set up init register */
 	for (i = 0; i < ARRAY_SIZE(init_reg_table); i++) {
@@ -357,12 +383,14 @@ static int __maybe_unused mpr_resume(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct mpr121_touchkey *mpr121 = i2c_get_clientdata(client);
+	u8 eleconf;
 
 	if (device_may_wakeup(&client->dev))
 		disable_irq_wake(client->irq);
 
-	i2c_smbus_write_byte_data(client, ELECTRODE_CONF_ADDR,
-				  mpr121->keycount);
+	/* 恢复电极配置，需要包含QUICK_CHARGE位 */
+	eleconf = mpr121->keycount | ELECTRODE_CONF_QUICK_CHARGE;
+	i2c_smbus_write_byte_data(client, ELECTRODE_CONF_ADDR, eleconf);
 
 	return 0;
 }
