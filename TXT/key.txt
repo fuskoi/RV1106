@@ -1,0 +1,13 @@
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC3LPbpq4oBBufAyLpUZxQeyQa/AOHGDLseJRtgrlb7GOezTRW2OxXI0MszVaHxsTvr6dqL0uE3s64tmOinWP+Oq8rWCDv3L2Bpsd6ylM35h2M2k4Ylbo17x5MLq3LCIF2zUwk6P3/NAPiPiYaeKAFzJAFoKdVu3Yj0EUBxocf2bMdnS893e62bmwhWRjH7GNsqipuBeu/lz8hq7fGyTDSP5qPwgI2W9WqI2NpQnaZTTT5eBg3S+lQcT7XX2ml1+zEyF5kWXQFX0E09Zsp7Pg068p7yZY2gkkxgApz0PTXSUaj2flBWY6AtOhmvpiqu5NvDseZaW+wQ+dL+AnBbh4UOXiDtO+ro4aLPIVcQfC4O+VTF3K0c+rH7E2GS+UqJ11puqpgrPRdmdP6aKp3Ucyw96yTSzMqekKljHgmIdP/m608ae+DkZ4bAVsx35V7nPvmzqEavUTqxKqZmKAuPKHu5xKCyt9BVKeduHNmP5jg5RO/ufBZfW7174M6iGUkbzpXgKNJa0GjXADz8QJdIwqWTnHH9by1wKE01gwZJQPjKFZJDtDdJkHfnVnnQfMLKqMlq5JPupbXoHI3GjcPu9V+nbQrjyY08/UdDVWO3Dzig3X9EEcYC0CiTBPSePxO1BQ6tLiO161Wu7V+idZtV/N7CcGgOoq1nCZVEK8YbCESU4w== 2362073765@qq.com
+
+//更换仓库
+git remote set-url origin https://github.com/fuskoi/ESP32S3.git
+git add .
+git commit -m ""
+git push -u origin 
+
+//上传本地main分支到远程仓库zjq分支
+git push origin main:zjq
+
+//删除本地分支
+git branch -d zjq

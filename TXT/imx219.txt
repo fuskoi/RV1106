@@ -12,6 +12,7 @@ ssh root@172.32.0.93 ^
   "v4l2-ctl -d /dev/video12 --set-fmt-video=width=1280,height=720,pixelformat=NV12 --stream-mmap --stream-count=0 --stream-to=-" ^
   | ffplay -fflags nobuffer -flags low_delay -framerate 60 -f rawvideo -pixel_format nv12 -video_size 1280x720 -
 
+
 //加载isp文件
 rkaiq_3A_server &
 

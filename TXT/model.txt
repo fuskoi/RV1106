@@ -1,0 +1,27 @@
+//进入Conda base环境
+source ~/miniconda3/bin/activate
+
+//进入 RKNN-Toolkit2 Conda 环境
+conda activate RKNN-Toolkit2
+
+//搭建模型训练环境
+conda create -n 环境名称 python=3.6
+
+//进入conda虚拟环境安装运行依赖库
+conda activate 环境名称
+pip install -r requirements.txt
+
+//退出虚拟环境
+conda deactivate
+
+# 备份当前 video0
+mv /dev/video0 /dev/video0.bak_now
+
+# 指向 rkisp_selfpath (81,12)
+mknod /dev/video0 c 81 12
+chmod 660 /dev/video0
+chgrp video /dev/video0
+
+# 验证
+cat /sys/class/video4linux/video0/name
+v4l2-ctl -d /dev/video0 --list-formats-ext | head -n 20

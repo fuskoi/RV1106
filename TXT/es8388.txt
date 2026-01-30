@@ -3,13 +3,48 @@ i2cdetect -y 3
 mount -t debugfs none /sys/kernel/debug 2>/dev/null || true
 cat /sys/kernel/debug/pinctrl/pinctrl-rockchip-pinctrl/pinmux-pins | grep "i2s0\|i2c\|67"
 cat /proc/asound/cards
-dmesg | grep -i "es8390\|audio\|codec"
+dmesg | grep -i "es8389\|audio\|codec"
 cat /sys/kernel/debug/clk/clk_summary | grep -i "i2s\|mclk"
 ls -la /dev/snd/
 cat /sys/kernel/debug/pinctrl/pinctrl-handles | grep -A20 ffae0000.i2s
 aplay -D hw:0,0 /mnt/share/demo.wav
 
-arecord -D hw:0,0 -r 48000 -f S16_LE -c 2 -d 5 /mnt/share/mic_5s.wav
+cat /sys/kernel/debug/clk/clk_summary | grep -i "i2s0_8ch_mclkout\|mclk_i2s0_8ch_tx\|mclk_i2s0_8ch_rx\|clk_i2s0_8ch_rx\|clk_i2s0_8ch_tx"
+
+dmesg | grep "7210\|8389"
+
+arecord -D hw:0,0 -r 48000 -f S16_LE -c 4 -d 5 /mnt/share/1.wav
+arecord -D plughw:0,0 -r 48000 -f S32_LE -c 4 -d 10 es7210_test.wav
+aplay -D plughw:0,1 /mnt/share/wenai.wav
+
+amixer -c 0 set PGA1_setting 12
+amixer -c 0 set PGA2_setting 12
+amixer -c 0 set PGA3_setting 12
+amixer -c 0 set PGA4_setting 12
+amixer -c 0 get PGA1_setting
+amixer -c 0 get PGA2_setting
+amixer -c 0 get PGA3_setting
+amixer -c 0 get PGA4_setting
+
+
+arecord -D cap_4to2 -f S16_LE -r 48000 | \
+aplay   -D play_2ch -f S16_LE -r 48000
+
+
+# 1) DLL 打开
+i2cset -y -f 3 0x40 0x06 0x00
+
+# 2) 关闭 ADC12/34 mute control（先全清，确保不门控）
+i2cset -y -f 3 0x40 0x14 0x00
+i2cset -y -f 3 0x40 0x15 0x00
+
+# 读回确认
+echo "0x14=$(i2cget -y -f 3 0x40 0x14) 0x15=$(i2cget -y -f 3 0x40 0x15) 0x06=$(i2cget -y -f 3 0x40 0x06)"
+wait $PID
+
+arecord -D hw:0,0 -r 48000 -c 4 -f S32_LE -d 10 -t raw > /tmp/x.raw &
+PID=$!
+sleep 1
 
 //实时转码mp3->wav
 ffmpeg -i 、/mnt/share/mingri.flac -f wav - | aplay
@@ -87,3 +122,25 @@ arecord -D hw:0,0 -r 48000 -f S16_LE -c 2 -d 5 stereo_mic.wav
 
 
 https://chatgpt.com/s/t_692e7b02563c8191992f1fd9edba0994
+
+
+# 1) 先全部解 mute
+amixer -c 0 set ADC1_MUTE off
+amixer -c 0 set ADC2_MUTE off
+amixer -c 0 set ADC3_MUTE off
+amixer -c 0 set ADC4_MUTE off
+amixer -c 0 set PGA1_setting 15
+amixer -c 0 set PGA2_setting 15
+amixer -c 0 set PGA3_setting 15
+amixer -c 0 set PGA4_setting 15
+# 2) 后台录 20 秒
+arecord -D hw:0,0 -r 48000 -f S16_LE -c 4 -d 20 /mnt/share/t.wav &
+
+# 3) 录音进行中，立刻查一次 mute 状态（重复两三次）
+sleep 1
+amixer -c 0 get ADC1_MUTE
+amixer -c 0 get ADC2_MUTE
+amixer -c 0 get ADC3_MUTE
+amixer -c 0 get ADC4_MUTE
+
+
