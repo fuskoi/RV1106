@@ -55,6 +55,33 @@ i2cset -f -y 3 0x10 0x00 0x80 b
 sleep 0.1
 i2cset -f -y 3 0x10 0x00 0x00 b
 
+# 查看用户以及家目录
+whoami
+echo $HOME
+
+#假设家目录为/root，以此为amixer添加控件比如音量增益控制等
+vi /root/.asoundrc
+
+pcm.dmic_sv {
+    type softvol
+    slave.pcm "hw:INMP441"
+    control {
+        name "Mic Boost"
+        card INMP441
+    }
+    max_dB 30.0
+}
+
+pcm.!default {
+    type asym
+    capture.pcm "dmic_sv"
+}
+
+ctl.!default {
+    type hw
+    card INMP441
+}
+
 
 # 查看所有简单控制器名称
 amixer scontrols
@@ -142,5 +169,6 @@ amixer -c 0 get ADC1_MUTE
 amixer -c 0 get ADC2_MUTE
 amixer -c 0 get ADC3_MUTE
 amixer -c 0 get ADC4_MUTE
+
 
 
