@@ -82,6 +82,10 @@ ctl.!default {
     card INMP441
 }
 
+# 使控件生效
+alsactl restore
+arecord -D dmic_sv -f S16_LE -r 16000 -c 2 -d 1 /dev/null   # 重新触发控件创建
+
 
 # 查看所有简单控制器名称
 amixer scontrols
@@ -169,6 +173,7 @@ amixer -c 0 get ADC1_MUTE
 amixer -c 0 get ADC2_MUTE
 amixer -c 0 get ADC3_MUTE
 amixer -c 0 get ADC4_MUTE
+
 
 
 
