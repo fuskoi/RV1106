@@ -25,6 +25,7 @@
 #include <linux/slab.h>
 #include <linux/regmap.h>
 #include <linux/stddef.h>
+#include <linux/io.h>
 #include <sound/core.h>
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
@@ -522,13 +523,13 @@ static struct snd_soc_dai_driver es8311_dai = {
 		.rates = ES8311_RATES,
 		.formats = ES8311_FORMATS,
 	},
-	.capture = {
-		.stream_name = "Capture",
-		.channels_min = 1,
-		.channels_max = 2,
-		.rates = ES8311_RATES,
-		.formats = ES8311_FORMATS,
-	},
+	// .capture = {
+	// 	.stream_name = "Capture",
+	// 	.channels_min = 1,
+	// 	.channels_max = 2,
+	// 	.rates = ES8311_RATES,
+	// 	.formats = ES8311_FORMATS,
+	// },
 	.ops = &es8311_ops,
 	.symmetric_rates = 1,
 };
@@ -569,11 +570,33 @@ static int es8311_regs_init(struct snd_soc_component *component)
 	return 0;
 }
 
+/* Enable mclk out by writing CPU config register, based on board requirement */
+static void es8311_mclk_out_enable(void)
+{
+	void __iomem *reg_addr;
+	unsigned int val = 0;
+
+	printk("------------mclk out enable set\n");
+	reg_addr = ioremap(0xff000004, 4);
+	if (reg_addr) {
+		writel(0xffff2220, reg_addr);
+		val = readl(reg_addr);
+		printk("------------val = 0x%x\n", val);
+		iounmap(reg_addr);
+	} else {
+		printk("------------Failed to map CPU config register\n");
+	}
+}
+
 static int es8311_probe(struct snd_soc_component *component)
 {
 	struct es8311_priv *es8311 = snd_soc_component_get_drvdata(component);
 
 	es8311->component = component;
+	
+	/* Board-specific: force enable MCLK output by programming CPU config */
+	es8311_mclk_out_enable();
+	
 	es8311_regs_init(component);
 
 	/* Configure optional properties: */
@@ -586,9 +609,14 @@ static int es8311_probe(struct snd_soc_component *component)
 	if (es8311->adc_volume)
 		snd_soc_component_write(component, ES8311_ADC_REG17,
 					es8311->adc_volume);
-	if (es8311->dac_volume)
+	/* Set DAC volume - use 0xbf (0dB) as default if not specified in DT */
+	if (es8311->dac_volume) {
 		snd_soc_component_write(component, ES8311_DAC_REG32,
 					es8311->dac_volume);
+	} else {
+		/* Default to 0dB if not specified in device tree */
+		snd_soc_component_write(component, ES8311_DAC_REG32, 0xbf);
+	}
 
 	return 0;
 }

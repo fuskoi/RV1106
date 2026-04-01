@@ -530,6 +530,8 @@ static int es8389_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 	case SND_SOC_DAIFMT_I2S:
 		dev_dbg(component->dev, "es8389_set_dai_fmt: setting I2S format\n");
 		state |= ES8389_DAIFMT_I2S;
+		/* 关闭TDM模式 */
+		regmap_update_bits(es8389->regmap, ES8389_ADC_MODE, 0xC0, ES8389_TDM_OFF);
 		break;
 	case SND_SOC_DAIFMT_RIGHT_J:
 		dev_err(component->dev, "es8389_set_dai_fmt: component driver does not support right justified\n");
@@ -537,14 +539,20 @@ static int es8389_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 	case SND_SOC_DAIFMT_LEFT_J:
 		dev_dbg(component->dev, "es8389_set_dai_fmt: setting left justified format\n");
 		state |= ES8389_DAIFMT_LEFT_J;
+		/* 关闭TDM模式 */
+		regmap_update_bits(es8389->regmap, ES8389_ADC_MODE, 0xC0, ES8389_TDM_OFF);
 		break;
 	case SND_SOC_DAIFMT_DSP_A:
-		dev_dbg(component->dev, "es8389_set_dai_fmt: setting DSP_A format\n");
+		dev_dbg(component->dev, "es8389_set_dai_fmt: setting DSP_A format and enabling TDM mode\n");
 		state |= ES8389_DAIFMT_DSP_A;
+		/* 启用STDM模式（标准TDM） */
+		regmap_update_bits(es8389->regmap, ES8389_ADC_MODE, 0xC0, ES8389_STDM_ON);
 		break;
 	case SND_SOC_DAIFMT_DSP_B:
-		dev_dbg(component->dev, "es8389_set_dai_fmt: setting DSP_B format\n");
+		dev_dbg(component->dev, "es8389_set_dai_fmt: setting DSP_B format and enabling TDM mode\n");
 		state |= ES8389_DAIFMT_DSP_B;
+		/* 启用STDM模式（标准TDM） */
+		regmap_update_bits(es8389->regmap, ES8389_ADC_MODE, 0xC0, ES8389_STDM_ON);
 		break;
 	default:
 		dev_dbg(component->dev, "es8389_set_dai_fmt: unknown format\n");

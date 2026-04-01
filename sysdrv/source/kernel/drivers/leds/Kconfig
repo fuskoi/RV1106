@@ -302,18 +302,6 @@ config LEDS_WRAP
 	help
 	  This option enables support for the PCEngines WRAP programmable LEDs.
 
-config LEDS_WS2812_PWM
-	tristate "WS2812 LED driver using PWM"
-	depends on LEDS_CLASS
-	depends on PWM
-	help
-	  This option enables support for WS2812 RGB LEDs controlled via PWM.
-	  WS2812 requires specific timing signals which are generated using PWM.
-	  The driver supports power-on green LED blinking and power-off red LED blinking.
-
-	  To compile this driver as a module, choose M here: the module
-	  will be called leds-ws2812-pwm.
-
 config LEDS_WS2812_GPIO
 	tristate "WS2812 LED driver using GPIO (RV1106)"
 	depends on ARCH_ROCKCHIP || COMPILE_TEST

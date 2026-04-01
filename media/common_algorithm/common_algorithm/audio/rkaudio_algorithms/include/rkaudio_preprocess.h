@@ -574,6 +574,7 @@ extern "C" {
 		//param->model_bf_en = EN_Fastaec | EN_Fix | EN_Agc | EN_Anr;
 		//param->model_bf_en = EN_Fastaec | EN_AES | EN_Agc | EN_Fix | EN_Anr | EN_HOWLING;
 		//param->model_bf_en = EN_Fastaec | EN_AES | EN_Anr | EN_Agc;
+		//param->model_bf_en = EN_Fastaec | EN_STDT | EN_AES | EN_Anr | EN_Dereverberation| EN_Agc;
 		param->Targ = 2;
 		param->ref_pos = REF_POSITION;
 		param->num_ref_channel = NUM_REF_CHANNEL;

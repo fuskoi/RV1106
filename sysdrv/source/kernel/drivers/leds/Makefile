@@ -94,7 +94,6 @@ obj-$(CONFIG_LEDS_TURRIS_OMNIA)		+= leds-turris-omnia.o
 obj-$(CONFIG_LEDS_WM831X_STATUS)	+= leds-wm831x-status.o
 obj-$(CONFIG_LEDS_WM8350)		+= leds-wm8350.o
 obj-$(CONFIG_LEDS_WRAP)			+= leds-wrap.o
-obj-$(CONFIG_LEDS_WS2812_PWM)		+= leds-ws2812-pwm.o
 obj-$(CONFIG_LEDS_WS2812_GPIO)		+= ws2812_drv.o
 
 # LED SPI Drivers

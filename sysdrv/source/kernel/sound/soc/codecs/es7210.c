@@ -46,7 +46,7 @@
  #define MIC_CHN_4   4
  #define MIC_CHN_2   2
  
- #define ES7210_TDM_ENABLE   DISABLE
+ #define ES7210_TDM_ENABLE   ENABLE
  #define ES7210_CHANNELS_MAX MIC_CHN_4
  
  #if ES7210_CHANNELS_MAX == MIC_CHN_2
@@ -693,6 +693,18 @@ static void es7210_mclk_out_enable(void)
 									  i2c_clt1[i]);
 				 }
 		 }
+
+		 	 // 关闭 ALC，固定数字增益
+	 es7210_multi_chips_write(ES7210_ALC_SEL_REG16, 0x00);
+
+	 // 设置 ADC 数字增益为 +32dB
+	 es7210_multi_chips_write(ES7210_ALC4_MAX_GAIN_REG1B, 0xFF);
+	 es7210_multi_chips_write(ES7210_ALC3_MAX_GAIN_REG1C, 0xFF);
+	 es7210_multi_chips_write(ES7210_ALC2_MAX_GAIN_REG1D, 0xFF);
+	 es7210_multi_chips_write(ES7210_ALC1_MAX_GAIN_REG1E, 0xFF);
+
+	 printk("es7210: digital gain set to +32dB\n");
+
 		 printk("exit->>>>>>>>>>%s!\n", __func__);
  }
  static void es7210_unmute(void)
@@ -1610,8 +1622,8 @@ static void es7210_mclk_out_enable(void)
  #endif
  
  };
- 
- static struct snd_soc_component_driver soc_codec_dev_es7210 = {
+
+static struct snd_soc_component_driver soc_codec_dev_es7210 = {
 		 .probe = es7210_probe,
 		 .remove = es7210_remove,
 		 .suspend = es7210_suspend,
@@ -1619,7 +1631,7 @@ static void es7210_mclk_out_enable(void)
 		 .set_bias_level = es7210_set_bias_level,
 		 .controls = es7210_snd_controls,
 		 .num_controls = ARRAY_SIZE(es7210_snd_controls),
- };
+};
  
  static ssize_t es7210_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
  {

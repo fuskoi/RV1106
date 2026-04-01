@@ -241,9 +241,10 @@ static int mpr121_phys_init(struct mpr121_touchkey *mpr121,
 	 * state quickly, or the buttons may not function after system
 	 * boot.
 	 */
-	eleconf = mpr121->keycount | ELECTRODE_CONF_QUICK_CHARGE;
-	ret |= i2c_smbus_write_byte_data(client, ELECTRODE_CONF_ADDR,
-					 eleconf);
+	 eleconf = (2 << 5) | ELECTRODE_CONF_QUICK_CHARGE | mpr121->keycount;
+	 ret = i2c_smbus_write_byte_data(client, ELECTRODE_CONF_ADDR, eleconf);
+	 if (ret)
+		 dev_err(&client->dev, "Failed to set electrode config with fast baseline load\n");
 	if (ret != 0)
 		goto err_i2c_write;
 
